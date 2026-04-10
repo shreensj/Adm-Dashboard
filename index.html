@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admission & Fees Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f0f4ff;--surface:#fff;--card:#fff;--sidebar:#1a1060;--sidebar-hover:#2d2270;--sidebar-active:#4f46e5;
+  --border:#e2e8f8;--border2:#c7d2f8;--text:#1a1060;--muted:#6b7498;--faint:#f5f7ff;
+  --c1:#4f46e5;--c2:#0ea5e9;--c3:#f59e0b;--c4:#10b981;--c5:#f43f5e;--c6:#8b5cf6;
+  --radius:14px;--radius-sm:9px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;min-height:100vh;display:flex;}
+
+/* SIDEBAR */
+.sidebar{width:230px;min-height:100vh;background:var(--sidebar);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:100;padding:0 0 20px;}
+.sidebar-brand{padding:22px 20px 18px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;gap:11px;}
+.brand-icon{width:40px;height:40px;background:var(--sidebar-active);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;color:#fff;}
+.brand-text{font-size:14px;font-weight:800;color:#fff;line-height:1.3;}
+.brand-sub{font-size:10px;color:rgba(255,255,255,0.4);font-weight:400;}
+.sb-sec{padding:18px 14px 5px;font-size:9px;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:2px;}
+.nav-item{margin:2px 10px;padding:10px 14px;border-radius:10px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .18s;color:rgba(255,255,255,0.5);font-size:13px;font-weight:500;}
+.nav-item:hover{background:var(--sidebar-hover);color:#fff;}
+.nav-item.active{background:var(--sidebar-active);color:#fff;}
+.ni{font-size:15px;width:20px;text-align:center;}
+.nb{margin-left:auto;background:rgba(255,255,255,0.14);color:rgba(255,255,255,0.7);padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;}
+.sb-bottom{margin-top:auto;padding:14px 12px 0;border-top:1px solid rgba(255,255,255,0.07);}
+
+/* LAYOUT */
+.main-wrap{margin-left:230px;flex:1;min-width:0;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.topbar-title{font-size:16px;font-weight:800;color:var(--text);}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.date-pill{font-size:12px;color:var(--muted);background:var(--faint);border:1px solid var(--border);padding:5px 13px;border-radius:20px;}
+.av-pill{display:flex;align-items:center;gap:8px;background:var(--faint);border:1px solid var(--border);padding:5px 12px 5px 6px;border-radius:20px;}
+.av-sm{width:26px;height:26px;border-radius:50%;background:var(--c1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;}
+.av-txt{font-size:12px;font-weight:600;color:var(--text);}
+
+.page-content{padding:24px 28px;}
+.page{display:none;}.page.active{display:block;}
+.ph{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px;}
+.pt{font-size:22px;font-weight:800;color:var(--text);}
+.ps{font-size:13px;color:var(--muted);margin-top:3px;}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;display:flex;flex-direction:column;gap:9px;position:relative;overflow:hidden;}
+.kpi-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;}
+.kpi-label{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.9px;}
+.kpi-value{font-size:26px;font-weight:800;line-height:1;}
+.kpi-sub{font-size:11.5px;color:var(--muted);}
+.kpi-stripe{position:absolute;bottom:0;left:0;right:0;height:3px;}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+.g3{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;}
+.ct{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px;}
+.cs{font-size:11px;color:var(--muted);margin-bottom:16px;}
+
+/* ===== STAFF PERFORMANCE CARD ===== */
+.sp-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative;}
+.sp-header{padding:18px 18px 14px;position:relative;}
+.sp-accent-bar{height:5px;position:absolute;top:0;left:0;right:0;}
+.sp-avatar-row{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.sp-avatar{width:48px;height:48px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;flex-shrink:0;}
+.sp-name{font-size:15px;font-weight:800;color:var(--text);}
+.sp-role{font-size:11px;color:var(--muted);}
+.sp-target-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-top:3px;}
+
+/* RING PROGRESS */
+.ring-row{display:flex;justify-content:space-around;padding:4px 0 14px;}
+.ring-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.ring-svg{transform:rotate(-90deg);}
+.ring-bg{fill:none;stroke-linecap:round;}
+.ring-fg{fill:none;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.34,1.2,.64,1);}
+.ring-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:center;}
+.ring-center{position:relative;}
+.ring-pct{font-size:13px;font-weight:800;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);white-space:nowrap;}
+
+/* TARGET PROGRESS BARS */
+.sp-body{padding:0 18px 16px;}
+.tpb-row{margin-bottom:12px;}
+.tpb-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;}
+.tpb-label{font-size:11.5px;font-weight:600;color:var(--muted);}
+.tpb-nums{font-size:11.5px;font-weight:700;}
+.tpb-track{height:8px;background:#eef0fb;border-radius:6px;overflow:visible;position:relative;}
+.tpb-fill{height:8px;border-radius:6px;transition:width .8s cubic-bezier(.34,1.2,.64,1);position:relative;}
+.tpb-target-line{position:absolute;top:-4px;bottom:-4px;width:2px;border-radius:2px;background:#1a1060;opacity:.25;}
+
+/* STATUS FLAGS */
+.sp-footer{padding:10px 18px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.status-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;}
+.conv-pill{font-size:11px;font-weight:700;color:var(--muted);}
+
+/* LEADERBOARD */
+.lb-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:6px;background:var(--faint);border:1px solid var(--border);}
+.lb-rank{font-size:15px;font-weight:800;width:24px;text-align:center;}
+.lb-av{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;}
+.lb-info{flex:1;min-width:0;}
+.lb-name{font-size:13px;font-weight:700;}
+.lb-sub{font-size:10.5px;color:var(--muted);}
+.lb-bar-wrap{flex:2;}
+.lb-val{font-size:14px;font-weight:800;min-width:65px;text-align:right;}
+.lb-target{font-size:10px;color:var(--muted);text-align:right;}
+
+/* MINI PROGRESS BAR */
+.mini-bar{height:5px;background:#eef0fb;border-radius:4px;overflow:hidden;}
+.mini-fill{height:100%;border-radius:4px;transition:width .7s cubic-bezier(.34,1.2,.64,1);}
+
+/* FORM */
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:18px;}
+.fct{font-size:15px;font-weight:800;margin-bottom:4px;}
+.fcs{font-size:12px;color:var(--muted);margin-bottom:20px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto;gap:12px;align-items:end;}
+.fg{display:flex;flex-direction:column;gap:6px;}
+label.fl{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;}
+input.fi,select.fi{background:var(--faint);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:500;color:var(--text);outline:none;transition:border-color .2s;width:100%;}
+input.fi:focus,select.fi:focus{border-color:var(--c1);background:#fff;}
+select.fi option{background:#fff;}
+.btn{font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;padding:10px 20px;border-radius:var(--radius-sm);border:none;cursor:pointer;transition:all .18s;white-space:nowrap;}
+.btn-primary{background:var(--c1);color:#fff;}.btn-primary:hover{background:#3730a3;}
+.btn-success{background:var(--c4);color:#fff;}.btn-success:hover{background:#059669;}
+.btn-export{background:#fff;color:var(--c1);border:1.5px solid var(--border2);}.btn-export:hover{background:var(--faint);}
+.btn-danger{background:transparent;border:1.5px solid #fecdd3;color:#f43f5e;padding:5px 12px;font-size:11.5px;}
+.btn-danger:hover{background:#fff1f3;}
+.btn-sm{padding:7px 14px;font-size:12px;}
+.btn-load{background:var(--faint);color:var(--c1);border:1.5px solid var(--border2);}.btn-load:hover{background:#e8eeff;}
+
+/* TABLE */
+.table-outer{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.table-toolbar{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{padding:10px 16px;text-align:left;font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;background:var(--faint);border-bottom:1px solid var(--border);white-space:nowrap;}
+tbody tr{border-bottom:1px solid var(--border);transition:background .12s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:var(--faint);}
+tbody td{padding:11px 16px;vertical-align:middle;}
+.schip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:700;}
+.tf{padding:10px 18px;font-size:11.5px;color:var(--muted);border-top:1px solid var(--border);background:var(--faint);}
+
+/* ACHIEVEMENT BANNER */
+.ach-banner{border-radius:var(--radius);padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:12px;border:1.5px solid;}
+.ach-icon{font-size:22px;flex-shrink:0;}
+.ach-text{font-size:13px;font-weight:700;}
+.ach-sub{font-size:11.5px;margin-top:2px;}
+
+/* OVERVIEW STAFF STRIP */
+.ov-staff-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.ov-sc{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;align-items:center;gap:12px;}
+.ov-av{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0;}
+.ov-info{flex:1;min-width:0;}
+.ov-name{font-size:12px;font-weight:700;}
+.ov-pct{font-size:18px;font-weight:800;line-height:1.1;}
+.ov-target{font-size:10px;color:var(--muted);}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:12px;z-index:999;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;background:var(--sidebar);color:#fff;transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);}
+.toast.show{transform:translateY(0);opacity:1;}
+
+/* ===== PASSWORD MODAL ===== */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,12,60,0.55);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal-box{background:#fff;border-radius:20px;padding:36px 36px 30px;width:360px;box-shadow:0 24px 60px rgba(26,16,96,0.18);position:relative;animation:modalIn .25s cubic-bezier(.34,1.56,.64,1);}
+@keyframes modalIn{from{opacity:0;transform:scale(.92) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-icon{width:56px;height:56px;border-radius:15px;background:#eef2ff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 18px;}
+.modal-title{font-size:18px;font-weight:800;text-align:center;color:var(--text);margin-bottom:6px;}
+.modal-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:24px;}
+.pw-input-wrap{position:relative;margin-bottom:10px;}
+.pw-input{width:100%;padding:11px 44px 11px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;color:var(--text);background:var(--faint);outline:none;transition:border-color .2s;letter-spacing:2px;}
+.pw-input:focus{border-color:var(--c1);background:#fff;}
+.pw-input.shake{animation:shake .35s;}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.pw-toggle{position:absolute;right:13px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted);padding:2px;}
+.pw-error{font-size:12px;color:#f43f5e;font-weight:600;min-height:18px;margin-bottom:10px;display:flex;align-items:center;gap:5px;}
+.pw-btn{width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--c1);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:800;border:none;cursor:pointer;transition:background .18s;}
+.pw-btn:hover{background:#3730a3;}
+.pw-attempts{font-size:11px;color:var(--muted);text-align:center;margin-top:10px;}
+.pw-locked{text-align:center;padding:10px 0;}
+.pw-locked-icon{font-size:36px;margin-bottom:10px;}
+.pw-locked-msg{font-size:13px;font-weight:700;color:#f43f5e;margin-bottom:4px;}
+.pw-locked-sub{font-size:12px;color:var(--muted);}
+.modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;padding:4px;}
+.modal-close:hover{color:var(--text);}
+
+/* ===== UPLOAD PAGE ===== */
+.drop-zone{border:2.5px dashed var(--border2);border-radius:var(--radius);padding:52px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--faint);position:relative;}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--c1);background:#eef2ff;}
+.drop-icon{font-size:44px;margin-bottom:12px;}
+.drop-title{font-size:17px;font-weight:800;color:var(--text);margin-bottom:6px;}
+.drop-sub{font-size:13px;color:var(--muted);margin-bottom:18px;}
+.drop-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.file-formats{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.fmt-chip{background:#fff;border:1px solid var(--border);border-radius:8px;padding:4px 12px;font-size:11.5px;font-weight:700;color:var(--muted);}
+
+.upload-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
+.step-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;display:flex;gap:12px;align-items:flex-start;}
+.step-num{width:30px;height:30px;border-radius:8px;background:var(--c1);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.step-title{font-size:13px;font-weight:700;margin-bottom:3px;}
+.step-sub{font-size:11.5px;color:var(--muted);}
+
+.col-map-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px;}
+.col-map-table th{background:var(--faint);padding:8px 12px;text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);border-bottom:1px solid var(--border);}
+.col-map-table td{padding:8px 12px;border-bottom:1px solid var(--border);}
+.col-map-table tr:last-child td{border-bottom:none;}
+.req-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#f43f5e;margin-right:5px;}
+.opt-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#f59e0b;margin-right:5px;}
+
+/* PREVIEW TABLE */
+.preview-section{margin-top:20px;}
+.preview-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.preview-title{font-size:14px;font-weight:800;}
+.preview-counts{display:flex;gap:8px;}
+.pcount{font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;}
+.pcount.ok{background:#d1fae5;color:#065f46;}
+.pcount.warn{background:#fef3c7;color:#854d0e;}
+.pcount.err{background:#ffe4e6;color:#9f1239;}
+
+.preview-table-wrap{max-height:320px;overflow-y:auto;border-radius:var(--radius-sm);border:1px solid var(--border);}
+.preview-table{width:100%;border-collapse:collapse;font-size:12px;}
+.preview-table th{position:sticky;top:0;background:var(--faint);padding:8px 12px;text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);border-bottom:1px solid var(--border);}
+.preview-table td{padding:8px 12px;border-bottom:1px solid var(--border);}
+.preview-table tr:last-child td{border-bottom:none;}
+.row-ok{background:#f0fdf4;}
+.row-warn{background:#fffbeb;}
+.row-err{background:#fff1f2;}
+.row-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;}
+.rb-ok{background:#d1fae5;color:#065f46;}
+.rb-warn{background:#fef3c7;color:#854d0e;}
+.rb-err{background:#ffe4e6;color:#9f1239;}
+.rb-dup{background:#ede9fe;color:#5b21b6;}
+
+.mode-toggle{display:flex;gap:8px;margin-bottom:16px;}
+.mode-btn{padding:8px 16px;border-radius:var(--radius-sm);font-size:12.5px;font-weight:700;border:1.5px solid var(--border);background:var(--card);color:var(--muted);cursor:pointer;transition:all .18s;flex:1;text-align:center;}
+.mode-btn.active{border-color:var(--c1);background:#eef2ff;color:var(--c1);}
+
+.upload-result{border-radius:var(--radius);padding:16px 20px;margin-top:14px;display:flex;align-items:center;gap:14px;}
+.ur-icon{font-size:28px;}
+.ur-title{font-size:14px;font-weight:800;}
+.ur-sub{font-size:12px;margin-top:3px;}
+
+@media(max-width:1200px){
+  .g4,.sp-grid{grid-template-columns:repeat(2,1fr);}
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:900px){
+  .sidebar{width:60px;}.brand-text,.brand-sub,.nav-item span:not(.ni),.sb-sec,.nb{display:none;}
+  .nav-item{justify-content:center;}.main-wrap{margin-left:60px;}
+  .g2,.g3{grid-template-columns:1fr;}
+  .form-grid{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">A</div>
+    <div><div class="brand-text">AdmissionPro</div><div class="brand-sub">Performance Tracker</div></div>
+  </div>
+  <div class="sb-sec">Navigation</div>
+  <div class="nav-item active" onclick="showPage('overview',this)"><span class="ni">◈</span><span>Overview</span></div>
+  <div class="nav-item" onclick="showPage('staff',this)"><span class="ni">⬡</span><span>Staff Performance</span></div>
+  <div class="nav-item" onclick="showPage('entry',this)"><span class="ni">✦</span><span>Add Entry</span></div>
+  <div class="nav-item" onclick="showPage('records',this)"><span class="ni">≡</span><span>Records</span><span class="nb" id="recCount">0</span></div>
+  <div class="sb-sec">Tools</div>
+  <div class="nav-item" onclick="exportCSV()"><span class="ni">↓</span><span>Export CSV</span></div>
+  <div class="sb-bottom">
+    <div class="nav-item" style="margin:0"><span class="ni">⚙</span><span>Settings</span></div>
+  </div>
+</aside>
+
+<div class="main-wrap">
+  <header class="topbar">
+    <div class="topbar-title" id="topbarTitle">Overview</div>
+    <div class="topbar-right">
+      <div class="date-pill" id="todayBadge"></div>
+      <div class="av-pill"><div class="av-sm">A</div><div class="av-txt">Admin</div></div>
+    </div>
+  </header>
+
+  <div class="page-content">
+
+    <!-- ===== OVERVIEW ===== -->
+    <div class="page active" id="page-overview">
+      <div class="ph">
+        <div><div class="pt">Dashboard Overview</div><div class="ps">Monitor admissions, fees & team performance</div></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select class="fi btn-sm" id="ovMonth" onchange="renderOverview()" style="font-weight:700;padding:7px 12px"><option value="all">All Months</option></select>
+          <button class="btn btn-export btn-sm" onclick="exportCSV()">↓ Export</button>
+        </div>
+      </div>
+
+      <div class="kpi-grid" id="kpiGrid"></div>
+
+      <!-- Staff target progress strip -->
+      <div class="ov-staff-strip" id="ovStaffStrip"></div>
+
+      <div class="g3">
+        <div class="card">
+          <div class="ct">Daily Admissions Trend</div><div class="cs">All staff combined per day</div>
+          <canvas id="cAdm" height="190"></canvas>
+        </div>
+        <div class="card">
+          <div class="ct">Staff Share</div><div class="cs">Admission distribution</div>
+          <div style="display:flex;justify-content:center;align-items:center;height:190px"><canvas id="cPie" height="175" width="175"></canvas></div>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="ct">Fees Collected Daily</div><div class="cs">Revenue trend (₹)</div>
+          <canvas id="cFees" height="160"></canvas>
+        </div>
+        <div class="card">
+          <div class="ct">Conversion Rate by Staff</div><div class="cs">Enquiry → Admission %</div>
+          <canvas id="cConv" height="160"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== STAFF PERFORMANCE ===== -->
+    <div class="page" id="page-staff">
+      <div class="ph">
+        <div><div class="pt">Staff Performance</div><div class="ps">Individual targets, progress & rankings</div></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select class="fi btn-sm" id="stMonth" onchange="renderStaff()" style="font-weight:700;padding:7px 12px"><option value="all">All Time</option></select>
+        </div>
+      </div>
+
+      <!-- Achievement banners -->
+      <div id="achBanners"></div>
+
+      <!-- Staff Performance Cards (2x2) -->
+      <div class="g2 sp-grid" id="staffCards" style="margin-bottom:20px"></div>
+
+      <!-- Leaderboards + Chart -->
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="ct">Admissions Leaderboard</div><div class="cs">Ranked by admissions vs target</div>
+          <div id="lbAdm"></div>
+        </div>
+        <div class="card">
+          <div class="ct">Fees Leaderboard</div><div class="cs">Ranked by fees vs target</div>
+          <div id="lbFees"></div>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="card">
+          <div class="ct">Monthly Admissions Comparison</div><div class="cs">Staff performance per month</div>
+          <canvas id="cStaffBar" height="180"></canvas>
+        </div>
+        <div class="card">
+          <div class="ct">Target Achievement Overview</div><div class="cs">% of target reached per staff</div>
+          <canvas id="cTargetBar" height="180"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== ADD ENTRY ===== -->
+    <div class="page" id="page-entry">
+      <div class="ph">
+        <div><div class="pt">Add Entry</div><div class="ps">Record daily admission data for each staff member</div></div>
+      </div>
+
+      <!-- SINGLE ENTRY -->
+      <div class="form-card">
+        <div class="fct">Single Entry</div>
+        <div class="fcs">Add or update a record for one staff member on a specific date</div>
+        <div class="form-grid">
+          <div class="fg"><label class="fl">Date</label><input type="date" class="fi" id="fDate"></div>
+          <div class="fg"><label class="fl">Staff</label>
+            <select class="fi" id="fStaff">
+              <option>Ashwini</option><option>Isha</option><option>Dhanashree</option><option>Navjyot</option>
+            </select>
+          </div>
+          <div class="fg"><label class="fl">Enquiries</label><input type="number" class="fi" id="fEnq" min="0" value="0"></div>
+          <div class="fg"><label class="fl">Admissions</label><input type="number" class="fi" id="fAdm" min="0" value="0"></div>
+          <div class="fg"><label class="fl">Fees (₹)</label><input type="number" class="fi" id="fFees" min="0" value="0"></div>
+          <button class="btn btn-primary" onclick="addEntry()">Save</button>
+        </div>
+        <div style="margin-top:12px;font-size:12px;color:var(--muted);padding:10px 12px;background:var(--faint);border-radius:var(--radius-sm);border:1px solid var(--border)">
+          💡 If a record for this Date + Staff already exists, it will be updated automatically.
+        </div>
+      </div>
+
+      <!-- BULK ENTRY -->
+      <div class="form-card">
+        <div class="fct">Quick Bulk Entry</div>
+        <div class="fcs">Enter data for all staff members for one day at once</div>
+        <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px">
+          <div class="fg"><label class="fl">Select Date</label><input type="date" class="fi" id="bDate" style="width:180px"></div>
+          <button class="btn btn-load" onclick="loadBulkForm()">Load Form</button>
+        </div>
+        <div id="bulkForm"></div>
+      </div>
+    </div>
+
+    <!-- ===== RECORDS ===== -->
+    <div class="page" id="page-records">
+      <div class="ph">
+        <div><div class="pt">All Records</div><div class="ps" id="recSub">Loading...</div></div>
+        <button class="btn btn-export btn-sm" onclick="exportCSV()">↓ Export CSV</button>
+      </div>
+      <div class="table-outer">
+        <div class="table-toolbar">
+          <select class="fi" id="fltStaff" onchange="renderTable()" style="width:140px"><option value="">All Staff</option><option>Ashwini</option><option>Isha</option><option>Dhanashree</option><option>Navjyot</option></select>
+          <input type="month" class="fi" id="fltMonth" onchange="renderTable()" style="width:160px">
+          <input type="text" class="fi" id="fltSearch" placeholder="🔍 Search..." oninput="renderTable()" style="width:180px">
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Staff</th><th>Enquiries</th><th>Admissions</th><th>Fees (₹)</th><th>Conv. %</th><th>Action</th></tr></thead>
+            <tbody id="recTbody"></tbody>
+          </table>
+        </div>
+        <div class="tf" id="recFooter"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- PASSWORD MODAL -->
+<div class="modal-overlay" id="pwModal" style="display:none">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closePwModal()">✕</button>
+    <div class="modal-icon">🔐</div>
+    <div class="modal-title">Protected Area</div>
+    <div class="modal-sub">Enter the admin password to access Upload Data</div>
+    <div id="pwModalBody">
+      <div class="pw-input-wrap">
+        <input type="password" class="pw-input" id="pwInput" placeholder="Enter password" onkeydown="if(event.key==='Enter')verifyPassword()">
+        <button class="pw-toggle" onclick="togglePwVis()" id="pwEye" title="Show/hide">👁</button>
+      </div>
+      <div class="pw-error" id="pwError"></div>
+      <button class="pw-btn" onclick="verifyPassword()">Unlock</button>
+      <div class="pw-attempts" id="pwAttempts"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const STAFF = ['Ashwini','Isha','Dhanashree','Navjyot'];
+const SC = {Ashwini:'#4f46e5',Isha:'#10b981',Dhanashree:'#f59e0b',Navjyot:'#f43f5e'};
+
+// TARGETS — fees & admissions
+const TARGETS = {
+  Isha:       {fees:35000, adm:25},
+  Navjyot:    {fees:35000, adm:25},
+  Ashwini:    {fees:15000, adm:15},
+  Dhanashree: {fees:15000, adm:15},
+};
+
+const TARGET_TIER = {Isha:'High',Navjyot:'High',Ashwini:'Standard',Dhanashree:'Standard'};
+const TIER_BG = {High:'#ecfdf5',Standard:'#eff6ff'};
+const TIER_CLR = {High:'#065f46',Standard:'#1e40af'};
+
+const SEED = [
+  {date:'2026-04-01',name:'Isha',enq:4,adm:2,fees:3000},
+  {date:'2026-04-02',name:'Ashwini',enq:1,adm:0,fees:0},
+  {date:'2026-04-02',name:'Isha',enq:3,adm:2,fees:0},
+  {date:'2026-04-03',name:'Dhanashree',enq:1,adm:0,fees:0},
+];
+function loadData(){try{const s=localStorage.getItem('admRecs_v3');if(s)return JSON.parse(s);}catch(e){}return SEED.map(r=>({...r}));}
+function saveData(d){try{localStorage.setItem('admRecs_v3',JSON.stringify(d));}catch(e){}}
+let records=loadData();
+
+// ============================================================
+// HELPERS
+// ============================================================
+function fmtDate(d){return new Date(d+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
+function fmtMon(m){const[y,mo]=m.split('-');return new Date(y,mo-1).toLocaleDateString('en-IN',{month:'short',year:'2-digit'});}
+function fmtN(n){return n.toLocaleString('en-IN');}
+function clamp(v,mn,mx){return Math.min(mx,Math.max(mn,v));}
+function getMonths(){return[...new Set(records.map(r=>r.date.slice(0,7)))].sort();}
+function filterM(recs,m){return(!m||m==='all')?recs:recs.filter(r=>r.date.startsWith(m));}
+
+function staffStats(recs){
+  return STAFF.map(name=>{
+    const rows=recs.filter(r=>r.name===name);
+    const enq=rows.reduce((s,r)=>s+r.enq,0);
+    const adm=rows.reduce((s,r)=>s+r.adm,0);
+    const fees=rows.reduce((s,r)=>s+r.fees,0);
+    const t=TARGETS[name];
+    return{name,enq,adm,fees,conv:enq>0?(adm/enq*100):0,
+      admPct:Math.round(adm/t.adm*100),feesPct:Math.round(fees/t.fees*100),
+      tAdm:t.adm,tFees:t.fees};
+  });
+}
+
+function getStatusInfo(pct){
+  if(pct>=100)return{label:'Target Achieved!',bg:'#ecfdf5',clr:'#065f46',dot:'#10b981'};
+  if(pct>=75) return{label:'On Track',bg:'#eff6ff',clr:'#1e40af',dot:'#3b82f6'};
+  if(pct>=40) return{label:'In Progress',bg:'#fefce8',clr:'#854d0e',dot:'#f59e0b'};
+  return{label:'Needs Attention',bg:'#fff1f2',clr:'#9f1239',dot:'#f43f5e'};
+}
+
+function populateMDDs(){
+  const ms=getMonths();
+  ['ovMonth','stMonth'].forEach(id=>{
+    const el=document.getElementById(id);
+    const cur=el.value;
+    while(el.options.length>1)el.remove(1);
+    ms.forEach(m=>{const o=document.createElement('option');o.value=m;o.text=fmtMon(m)+' '+m.split('-')[0];el.appendChild(o);});
+    if(cur)el.value=cur;
+  });
+  document.getElementById('recCount').textContent=records.length;
+  document.getElementById('recSub').textContent=`${records.length} total records across ${STAFF.length} staff`;
+}
+
+// ============================================================
+// CHARTS
+// ============================================================
+const CH={};
+function destroyChart(k){if(CH[k]){CH[k].destroy();delete CH[k];}}
+const baseScales={x:{ticks:{color:'#6b7498',font:{size:11}},grid:{display:false}},y:{ticks:{color:'#6b7498',font:{size:11}},grid:{color:'#eef2ff'},beginAtZero:true}};
+
+// ============================================================
+// RING SVG
+// ============================================================
+function makeRing(pct, color, size=70){
+  const r=28, cx=size/2, cy=size/2;
+  const circ=2*Math.PI*r;
+  const dash=clamp(pct,0,100)/100*circ;
+  const txt=pct>999?'999+':pct+'%';
+  return`<div style="position:relative;width:${size}px;height:${size}px;flex-shrink:0">
+    <svg class="ring-svg" width="${size}" height="${size}">
+      <circle class="ring-bg" cx="${cx}" cy="${cy}" r="${r}" stroke="#eef0fb" stroke-width="7"/>
+      <circle class="ring-fg" cx="${cx}" cy="${cy}" r="${r}" stroke="${pct>=100?'#10b981':color}" stroke-width="7"
+        stroke-dasharray="${circ}" stroke-dashoffset="${circ-dash}" style="transition:stroke-dashoffset .8s"/>
+    </svg>
+    <div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:${pct>=100?'#10b981':color}">${txt}</div>
+  </div>`;
+}
+
+// ============================================================
+// OVERVIEW
+// ============================================================
+function renderOverview(){
+  const m=document.getElementById('ovMonth').value;
+  const recs=filterM(records,m);
+  const ss=staffStats(recs);
+  const totalEnq=recs.reduce((s,r)=>s+r.enq,0);
+  const totalAdm=recs.reduce((s,r)=>s+r.adm,0);
+  const totalFees=recs.reduce((s,r)=>s+r.fees,0);
+  const conv=totalEnq>0?(totalAdm/totalEnq*100).toFixed(1):0;
+
+  // KPIs
+  document.getElementById('kpiGrid').innerHTML=[
+    {label:'Total Enquiries',val:fmtN(totalEnq),sub:'All staff combined',icon:'◎',c:'#4f46e5',bg:'#eef2ff'},
+    {label:'Total Admissions',val:fmtN(totalAdm),sub:'Confirmed students',icon:'✓',c:'#10b981',bg:'#d1fae5'},
+    {label:'Fees Collected',val:'₹'+fmtN(totalFees),sub:'Total revenue',icon:'₹',c:'#f59e0b',bg:'#fef3c7'},
+    {label:'Conversion Rate',val:conv+'%',sub:'Enquiry → Admission',icon:'%',c:'#f43f5e',bg:'#ffe4e6'},
+  ].map(k=>`<div class="kpi"><div class="kpi-icon" style="background:${k.bg};color:${k.c}">${k.icon}</div><div class="kpi-label">${k.label}</div><div class="kpi-value" style="color:${k.c}">${k.val}</div><div class="kpi-sub">${k.sub}</div><div class="kpi-stripe" style="background:${k.c}"></div></div>`).join('');
+
+  // Staff strip with target %
+  document.getElementById('ovStaffStrip').innerHTML=ss.map(s=>`
+    <div class="ov-sc">
+      <div class="ov-av" style="background:${SC[s.name]}">${s.name[0]}</div>
+      <div class="ov-info">
+        <div class="ov-name">${s.name}</div>
+        <div class="ov-pct" style="color:${SC[s.name]}">${Math.min(s.admPct,100)}%</div>
+        <div class="ov-target">of ${s.tAdm} adm target</div>
+        <div class="mini-bar" style="margin-top:5px"><div class="mini-fill" style="width:${clamp(s.admPct,0,100)}%;background:${SC[s.name]}"></div></div>
+      </div>
+      ${makeRing(s.feesPct,SC[s.name],54)}
+    </div>`).join('');
+
+  // Charts
+  const days=[...new Set(recs.map(r=>r.date))].sort();
+  const lbls=days.map(d=>{const p=d.split('-');return p[2]+' '+new Date(d+'T00:00:00').toLocaleString('en-IN',{month:'short'});});
+
+  destroyChart('adm');
+  CH.adm=new Chart(document.getElementById('cAdm'),{type:'bar',data:{labels:lbls,datasets:[{data:days.map(d=>recs.filter(r=>r.date===d).reduce((s,r)=>s+r.adm,0)),backgroundColor:'#c7d2fe',borderColor:'#4f46e5',borderWidth:1.5,borderRadius:5,borderSkipped:false}]},options:{plugins:{legend:{display:false}},scales:baseScales}});
+
+  destroyChart('pie');
+  const pss=staffStats(recs);
+  CH.pie=new Chart(document.getElementById('cPie'),{type:'doughnut',data:{labels:pss.map(s=>s.name),datasets:[{data:pss.map(s=>s.adm),backgroundColor:pss.map(s=>SC[s.name]),borderWidth:3,borderColor:'#fff',hoverOffset:8}]},options:{plugins:{legend:{position:'bottom',labels:{color:'#6b7498',font:{size:11},padding:10}}},cutout:'62%'}});
+
+  destroyChart('fees');
+  CH.fees=new Chart(document.getElementById('cFees'),{type:'line',data:{labels:lbls,datasets:[{data:days.map(d=>recs.filter(r=>r.date===d).reduce((s,r)=>s+r.fees,0)),borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.07)',fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:'#f59e0b'}]},options:{plugins:{legend:{display:false}},scales:baseScales}});
+
+  destroyChart('conv');
+  CH.conv=new Chart(document.getElementById('cConv'),{type:'bar',data:{labels:ss.map(s=>s.name),datasets:[{data:ss.map(s=>parseFloat(s.conv.toFixed(1))),backgroundColor:ss.map(s=>SC[s.name]+'aa'),borderColor:ss.map(s=>SC[s.name]),borderWidth:1.5,borderRadius:8}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#6b7498'},grid:{display:false}},y:{ticks:{color:'#6b7498',callback:v=>v+'%'},grid:{color:'#eef2ff'},max:100,beginAtZero:true}}}});
+}
+
+// ============================================================
+// STAFF PERFORMANCE
+// ============================================================
+function renderStaff(){
+  const m=document.getElementById('stMonth').value;
+  const recs=filterM(records,m);
+  const ss=staffStats(recs);
+  const sorted=[...ss].sort((a,b)=>b.admPct-a.admPct);
+
+  // Achievement banners
+  const achievers=ss.filter(s=>s.admPct>=100);
+  const achDiv=document.getElementById('achBanners');
+  if(achievers.length){
+    achDiv.innerHTML=achievers.map(s=>`
+      <div class="ach-banner" style="background:#ecfdf5;border-color:#6ee7b7;margin-bottom:10px">
+        <div class="ach-icon">🏆</div>
+        <div><div class="ach-text" style="color:#065f46">${s.name} has achieved their target!</div>
+        <div class="ach-sub" style="color:#10b981">${s.adm} admissions · ₹${fmtN(s.fees)} collected — Target: ${s.tAdm} adm / ₹${fmtN(s.tFees)}</div></div>
+      </div>`).join('');
+  } else { achDiv.innerHTML=''; }
+
+  // Staff cards — 2x2 detailed layout
+  const rk=['#f59e0b','#94a3b8','#c2652a','#8b5cf6'];
+  const rankLabels=['🥇 Top Performer','🥈 2nd Place','🥉 3rd Place','4th Place'];
+
+  document.getElementById('staffCards').innerHTML=ss.map(s=>{
+    const rank=sorted.findIndex(x=>x.name===s.name);
+    const st=getStatusInfo(s.admPct);
+    const feesSt=getStatusInfo(s.feesPct);
+    const admPctClamped=clamp(s.admPct,0,100);
+    const feesPctClamped=clamp(s.feesPct,0,100);
+    const tier=TARGET_TIER[s.name];
+    return`<div class="sp-card">
+      <div class="sp-accent-bar" style="background:${SC[s.name]}"></div>
+      <div class="sp-header">
+        <div class="sp-avatar-row">
+          <div class="sp-avatar" style="background:${SC[s.name]}">${s.name[0]}</div>
+          <div>
+            <div class="sp-name">${s.name}</div>
+            <div class="sp-role">Admission Officer</div>
+            <div class="sp-target-badge" style="background:${TIER_BG[tier]};color:${TIER_CLR[tier]}">${tier} Target — Adm: ${s.tAdm} · ₹${fmtN(s.tFees)}</div>
+          </div>
+          <div style="margin-left:auto;text-align:right">
+            <div style="font-size:10.5px;color:var(--muted);margin-bottom:4px">Rank</div>
+            <div style="font-size:22px;font-weight:800;color:${rk[rank]}">${rank+1}</div>
+            <div style="font-size:10px;color:var(--muted)">${rankLabels[rank].replace(/^../,'')}</div>
+          </div>
+        </div>
+
+        <!-- DUAL RINGS -->
+        <div class="ring-row">
+          <div class="ring-wrap">
+            ${makeRing(s.admPct,SC[s.name],72)}
+            <div class="ring-label">Admissions<br>${s.adm} / ${s.tAdm}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;padding:0 10px">
+            <div style="font-size:11px;color:var(--muted);text-align:center">Enquiries<br><strong style="font-size:16px;color:var(--text)">${s.enq}</strong></div>
+            <div style="font-size:11px;color:var(--muted);text-align:center">Conv.<br><strong style="font-size:16px;color:#4f46e5">${s.conv.toFixed(1)}%</strong></div>
+          </div>
+          <div class="ring-wrap">
+            ${makeRing(s.feesPct,SC[s.name],72)}
+            <div class="ring-label">Fees<br>₹${fmtN(s.fees)} / ₹${fmtN(s.tFees)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sp-body">
+        <!-- ADMISSIONS TARGET BAR -->
+        <div class="tpb-row">
+          <div class="tpb-header">
+            <span class="tpb-label">Admissions Progress</span>
+            <span class="tpb-nums" style="color:${SC[s.name]}">${s.adm} <span style="color:var(--muted);font-weight:400">of ${s.tAdm}</span> &nbsp;·&nbsp; ${s.adm>0?s.tAdm-s.adm>0?'<span style="color:#f59e0b">'+((s.tAdm-s.adm))+' remaining</span>':'<span style="color:#10b981">✓ Done!</span>':'Not started'}</span>
+          </div>
+          <div class="tpb-track">
+            <div class="tpb-fill" style="width:${admPctClamped}%;background:${SC[s.name]}"></div>
+          </div>
+        </div>
+        <!-- FEES TARGET BAR -->
+        <div class="tpb-row">
+          <div class="tpb-header">
+            <span class="tpb-label">Fees Progress</span>
+            <span class="tpb-nums" style="color:${SC[s.name]}">₹${fmtN(s.fees)} <span style="color:var(--muted);font-weight:400">of ₹${fmtN(s.tFees)}</span> &nbsp;·&nbsp; ${s.fees>0?s.tFees-s.fees>0?'<span style="color:#f59e0b">₹'+fmtN(s.tFees-s.fees)+' left</span>':'<span style="color:#10b981">✓ Done!</span>':'Not started'}</span>
+          </div>
+          <div class="tpb-track">
+            <div class="tpb-fill" style="width:${feesPctClamped}%;background:${SC[s.name]}"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sp-footer">
+        <span class="status-pill" style="background:${st.bg};color:${st.clr}"><span style="width:7px;height:7px;border-radius:50%;background:${st.dot};display:inline-block"></span>${st.label}</span>
+        <span class="conv-pill">Conv. Rate: <strong style="color:var(--text)">${s.conv.toFixed(1)}%</strong></span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // LEADERBOARDS
+  const byAdm=[...ss].sort((a,b)=>b.admPct-a.admPct);
+  const byFees=[...ss].sort((a,b)=>b.feesPct-a.feesPct);
+
+  document.getElementById('lbAdm').innerHTML=byAdm.map((s,i)=>`
+    <div class="lb-item">
+      <div class="lb-rank" style="color:${rk[i]}">${i+1}</div>
+      <div class="lb-av" style="background:${SC[s.name]}">${s.name[0]}</div>
+      <div class="lb-info"><div class="lb-name">${s.name}</div><div class="lb-sub">${s.adm} of ${s.tAdm} admissions</div></div>
+      <div class="lb-bar-wrap"><div class="mini-bar"><div class="mini-fill" style="width:${clamp(s.admPct,0,100)}%;background:${SC[s.name]}"></div></div></div>
+      <div><div class="lb-val" style="color:${SC[s.name]}">${clamp(s.admPct,0,999)}%</div><div class="lb-target" style="color:var(--muted)">target</div></div>
+    </div>`).join('');
+
+  document.getElementById('lbFees').innerHTML=byFees.map((s,i)=>`
+    <div class="lb-item">
+      <div class="lb-rank" style="color:${rk[i]}">${i+1}</div>
+      <div class="lb-av" style="background:${SC[s.name]}">${s.name[0]}</div>
+      <div class="lb-info"><div class="lb-name">${s.name}</div><div class="lb-sub">₹${fmtN(s.fees)} of ₹${fmtN(s.tFees)}</div></div>
+      <div class="lb-bar-wrap"><div class="mini-bar"><div class="mini-fill" style="width:${clamp(s.feesPct,0,100)}%;background:${SC[s.name]}"></div></div></div>
+      <div><div class="lb-val" style="color:${SC[s.name]}">${clamp(s.feesPct,0,999)}%</div><div class="lb-target" style="color:var(--muted)">target</div></div>
+    </div>`).join('');
+
+  // Monthly admissions chart
+  const months=getMonths();
+  destroyChart('stBar');
+  CH.stBar=new Chart(document.getElementById('cStaffBar'),{type:'bar',data:{labels:months.map(fmtMon),datasets:STAFF.map(name=>({label:name,data:months.map(mo=>records.filter(x=>x.date.startsWith(mo)&&x.name===name).reduce((s,x)=>s+x.adm,0)),backgroundColor:SC[name]+'cc',borderRadius:5}))},options:{plugins:{legend:{labels:{color:'#6b7498',font:{size:11}}}},scales:{x:{ticks:{color:'#6b7498'},grid:{display:false}},y:{ticks:{color:'#6b7498'},grid:{color:'#eef2ff'},beginAtZero:true}}}});
+
+  // Target achievement radar-style bar
+  destroyChart('tgtBar');
+  const tgtLabels=ss.map(s=>s.name);
+  const admPcts=ss.map(s=>clamp(s.admPct,0,120));
+  const feesPcts=ss.map(s=>clamp(s.feesPct,0,120));
+  CH.tgtBar=new Chart(document.getElementById('cTargetBar'),{type:'bar',data:{labels:tgtLabels,datasets:[
+    {label:'Admissions %',data:admPcts,backgroundColor:ss.map(s=>SC[s.name]+'bb'),borderColor:ss.map(s=>SC[s.name]),borderWidth:1.5,borderRadius:6},
+    {label:'Fees %',data:feesPcts,backgroundColor:ss.map(s=>SC[s.name]+'44'),borderColor:ss.map(s=>SC[s.name]),borderWidth:1.5,borderRadius:6,borderDash:[4,4]},
+  ]},options:{plugins:{legend:{labels:{color:'#6b7498',font:{size:11}}},annotation:{annotations:{target:{type:'line',yMin:100,yMax:100,borderColor:'#4f46e5',borderWidth:1.5,borderDash:[6,4],label:{display:true,content:'Target 100%',color:'#4f46e5',font:{size:10}}}}}},scales:{x:{ticks:{color:'#6b7498'},grid:{display:false}},y:{ticks:{color:'#6b7498',callback:v=>v+'%'},grid:{color:'#eef2ff'},max:120,beginAtZero:true}}}});
+}
+
+// ============================================================
+// TABLE
+// ============================================================
+function renderTable(){
+  const sf=document.getElementById('fltStaff').value;
+  const mf=document.getElementById('fltMonth').value;
+  const qf=document.getElementById('fltSearch').value.toLowerCase();
+  let recs=[...records].sort((a,b)=>b.date.localeCompare(a.date)||a.name.localeCompare(b.name));
+  if(sf)recs=recs.filter(r=>r.name===sf);
+  if(mf)recs=recs.filter(r=>r.date.startsWith(mf));
+  if(qf)recs=recs.filter(r=>r.name.toLowerCase().includes(qf)||r.date.includes(qf));
+  const tbody=document.getElementById('recTbody');
+  if(!recs.length){tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;color:#6b7498;padding:32px;font-size:13px">No records found</td></tr>`;return;}
+  tbody.innerHTML=recs.map(r=>{
+    const idx=records.findIndex(x=>x.date===r.date&&x.name===r.name);
+    const conv=r.enq>0?(r.adm/r.enq*100).toFixed(0)+'%':'—';
+    return`<tr>
+      <td style="font-size:12.5px;color:#6b7498">${fmtDate(r.date)}</td>
+      <td><span class="schip" style="background:${SC[r.name]}18;color:${SC[r.name]}">${r.name[0]} ${r.name}</span></td>
+      <td><strong>${r.enq}</strong></td>
+      <td><strong style="color:#10b981">${r.adm}</strong></td>
+      <td><strong style="color:#f59e0b">₹${fmtN(r.fees)}</strong></td>
+      <td><span style="background:#f0fdf4;color:#10b981;padding:2px 8px;border-radius:20px;font-size:11.5px;font-weight:700">${conv}</span></td>
+      <td><button class="btn btn-danger" onclick="deleteRecord(${idx})">Delete</button></td>
+    </tr>`;
+  }).join('');
+  const tE=recs.reduce((s,r)=>s+r.enq,0),tA=recs.reduce((s,r)=>s+r.adm,0),tF=recs.reduce((s,r)=>s+r.fees,0);
+  document.getElementById('recFooter').innerHTML=`<strong>${recs.length}</strong> records &nbsp;·&nbsp; Enquiries: <strong>${tE}</strong> &nbsp;·&nbsp; Admissions: <strong>${tA}</strong> &nbsp;·&nbsp; Fees: <strong>₹${fmtN(tF)}</strong>`;
+}
+function deleteRecord(i){if(!confirm('Delete this record?'))return;records.splice(i,1);saveData(records);populateMDDs();renderTable();renderOverview();renderStaff();showToast('✓ Record deleted');}
+
+// ============================================================
+// ENTRY
+// ============================================================
+// ============================================================
+// PASSWORD PROTECTION
+// ============================================================
+const UPLOAD_PASSWORD = 'Admin@123';
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MS = 2 * 60 * 1000; // 2 minutes
+let pwAttempts = 0;
+let pwLockedUntil = 0;
+let uploadUnlocked = false;
+let pendingNavEl = null;
+
+function showPwModal(navEl) {
+  pendingNavEl = navEl;
+  document.getElementById('pwModal').style.display = 'flex';
+  document.getElementById('pwInput').value = '';
+  document.getElementById('pwError').textContent = '';
+  document.getElementById('pwAttempts').textContent = '';
+  renderPwState();
+  setTimeout(() => document.getElementById('pwInput').focus(), 80);
+}
+
+function closePwModal() {
+  document.getElementById('pwModal').style.display = 'none';
+  pendingNavEl = null;
+}
+
+function renderPwState() {
+  const now = Date.now();
+  const body = document.getElementById('pwModalBody');
+  if (pwLockedUntil > now) {
+    const secsLeft = Math.ceil((pwLockedUntil - now) / 1000);
+    body.innerHTML = `<div class="pw-locked">
+      <div class="pw-locked-icon">🔒</div>
+      <div class="pw-locked-msg">Too many failed attempts</div>
+      <div class="pw-locked-sub">Try again in <strong id="lockTimer">${secsLeft}</strong> seconds</div>
+    </div>`;
+    const interval = setInterval(() => {
+      const s = Math.ceil((pwLockedUntil - Date.now()) / 1000);
+      const el = document.getElementById('lockTimer');
+      if (!el) { clearInterval(interval); return; }
+      if (s <= 0) {
+        clearInterval(interval);
+        pwAttempts = 0;
+        body.innerHTML = `<div class="pw-input-wrap"><input type="password" class="pw-input" id="pwInput" placeholder="Enter password" onkeydown="if(event.key==='Enter')verifyPassword()"><button class="pw-toggle" onclick="togglePwVis()" id="pwEye">👁</button></div><div class="pw-error" id="pwError"></div><button class="pw-btn" onclick="verifyPassword()">Unlock</button><div class="pw-attempts" id="pwAttempts"></div>`;
+        setTimeout(() => document.getElementById('pwInput').focus(), 50);
+      } else { el.textContent = s; }
+    }, 1000);
+    return;
+  }
+  const rem = MAX_ATTEMPTS - pwAttempts;
+  if (pwAttempts > 0) document.getElementById('pwAttempts').textContent = `${rem} attempt${rem!==1?'s':''} remaining`;
+}
+
+function verifyPassword() {
+  const now = Date.now();
+  if (pwLockedUntil > now) return;
+  const val = document.getElementById('pwInput').value;
+  if (val === UPLOAD_PASSWORD) {
+    uploadUnlocked = true;
+    pwAttempts = 0;
+    document.getElementById('pwModal').style.display = 'none';
+    _doShowPage('entry', pendingNavEl);
+    showToast('✓ Access granted — Add Entry unlocked');
+    pendingNavEl = null;
+  } else {
+    pwAttempts++;
+    const inp = document.getElementById('pwInput');
+    inp.classList.add('shake');
+    setTimeout(() => inp.classList.remove('shake'), 400);
+    inp.value = '';
+    if (pwAttempts >= MAX_ATTEMPTS) {
+      pwLockedUntil = Date.now() + LOCKOUT_MS;
+      renderPwState();
+    } else {
+      const rem = MAX_ATTEMPTS - pwAttempts;
+      document.getElementById('pwError').innerHTML = '✕ Incorrect password';
+      document.getElementById('pwAttempts').textContent = `${rem} attempt${rem!==1?'s':''} remaining`;
+    }
+  }
+}
+
+function togglePwVis() {
+  const inp = document.getElementById('pwInput');
+  const eye = document.getElementById('pwEye');
+  if (!inp) return;
+  if (inp.type === 'password') { inp.type = 'text'; eye.textContent = '🙈'; }
+  else { inp.type = 'password'; eye.textContent = '👁'; }
+  inp.focus();
+}
+
+// Close modal on overlay click
+document.getElementById('pwModal').addEventListener('click', function(e) {
+  if (e.target === this) closePwModal();
+});
+// ============================================================
+// ADD ENTRY
+// ============================================================
+function addEntry(){
+  const date=document.getElementById('fDate').value;
+  const name=document.getElementById('fStaff').value;
+  const enq=parseInt(document.getElementById('fEnq').value)||0;
+  const adm=parseInt(document.getElementById('fAdm').value)||0;
+  const fees=parseFloat(document.getElementById('fFees').value)||0;
+  if(!date){alert('Please select a date');return;}
+  const idx=records.findIndex(r=>r.date===date&&r.name===name);
+  if(idx>=0)records[idx]={date,name,enq,adm,fees};
+  else records.push({date,name,enq,adm,fees});
+  saveData(records);populateMDDs();renderTable();renderOverview();renderStaff();
+  showToast('✓ Record saved for '+name);
+  ['fEnq','fAdm','fFees'].forEach(id=>document.getElementById(id).value='0');
+}
+
+function loadBulkForm(){
+  const date=document.getElementById('bDate').value;
+  if(!date){alert('Select a date first');return;}
+  document.getElementById('bulkForm').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+    ${STAFF.map(name=>{
+      const r=records.find(x=>x.date===date&&x.name===name)||{enq:0,adm:0,fees:0};
+      const t=TARGETS[name];
+      return`<div style="background:var(--faint);border:1.5px solid ${SC[name]}33;border-radius:var(--radius);padding:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <div style="width:30px;height:30px;border-radius:8px;background:${SC[name]};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff">${name[0]}</div>
+          <div style="font-size:13px;font-weight:800;color:${SC[name]}">${name}</div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:12px">Target: ${t.adm} adm · ₹${fmtN(t.fees)}</div>
+        <div class="fg" style="margin-bottom:8px"><label class="fl">Enquiries</label><input type="number" class="fi" id="b_e_${name}" value="${r.enq}" min="0"></div>
+        <div class="fg" style="margin-bottom:8px"><label class="fl">Admissions</label><input type="number" class="fi" id="b_a_${name}" value="${r.adm}" min="0"></div>
+        <div class="fg"><label class="fl">Fees (₹)</label><input type="number" class="fi" id="b_f_${name}" value="${r.fees}" min="0"></div>
+      </div>`;
+    }).join('')}
+    </div>
+    <button class="btn btn-success" onclick="saveBulk('${date}')">✓ Save All for ${fmtDate(date)}</button>`;
+}
+
+function saveBulk(date){
+  STAFF.forEach(name=>{
+    const enq=parseInt(document.getElementById(`b_e_${name}`).value)||0;
+    const adm=parseInt(document.getElementById(`b_a_${name}`).value)||0;
+    const fees=parseFloat(document.getElementById(`b_f_${name}`).value)||0;
+    const idx=records.findIndex(r=>r.date===date&&r.name===name);
+    if(idx>=0)records[idx]={date,name,enq,adm,fees};else records.push({date,name,enq,adm,fees});
+  });
+  saveData(records);populateMDDs();renderTable();renderOverview();renderStaff();
+  showToast('✓ All staff saved for '+fmtDate(date));
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+const TITLES={overview:'Overview',staff:'Staff Performance',entry:'Add Entry',records:'Records'};
+
+function _doShowPage(name, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(el) el.classList.add('active');
+  document.getElementById('topbarTitle').textContent=TITLES[name];
+  if(name==='overview') renderOverview();
+  if(name==='records') renderTable();
+  if(name==='staff') renderStaff();
+}
+
+function showPage(name, el) {
+  if (name === 'entry' && !uploadUnlocked) { showPwModal(el); return; }
+  _doShowPage(name, el);
+}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}
+function exportCSV(){
+  const csv='Date,Staff,Enquiries,Admissions,Fees\n'+[...records].sort((a,b)=>a.date.localeCompare(b.date)).map(r=>`${r.date},${r.name},${r.enq},${r.adm},${r.fees}`).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='admission_records.csv';a.click();
+}
+
+// INIT
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('todayBadge').textContent=new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  const iso=new Date().toISOString().split('T')[0];
+  document.getElementById('fDate').value=iso;
+  document.getElementById('bDate').value=iso;
+  populateMDDs();
+  renderOverview();
+});
+</script>
+</body>
+</html>
